@@ -27,7 +27,9 @@
 
 在本目录运行 `python scripts/audit_manuscript.py` 可检查正文结构与文件引用。
 
-`python scripts/build_manuscript_outputs.py` 从Markdown更新HTML和Word，需要`python-docx`。
+`python scripts/build_manuscript_outputs.py` 从Markdown更新HTML和Word。先安装 `python -m pip install -r scripts/requirements-documents.txt`（Python 3.10及以上）。HTML使用原生MathML离线显示公式，适合现代Chrome、Edge或Firefox；Word使用Pandoc转换为可编辑的原生公式对象。Markdown采用GitHub支持的 `$...$` 和 `$$...$$` 公式定界符。
+
+运行 `python scripts/test_math_rendering.py` 可核验10个独立公式、行内公式、Word公式结构，并检查相对于原始提交的公式正文与论文文字保持不变。GitHub源码页面只展示HTML代码，阅读HTML需要本地打开；阅读Markdown时请使用渲染视图而非Raw源码。
 
 图表生成依赖`numpy`、`matplotlib`以及原工作区的`进度/`实验JSON。完整原始实验产物、模型权重、音乐音频与本地安装依赖不包含在本仓库；仓库中的`figure_manifest.json`保留来源路径与SHA记录，不能据此声称已公开完整实验数据。
 

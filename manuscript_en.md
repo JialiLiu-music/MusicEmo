@@ -44,111 +44,111 @@ Negative transfer has a broad prior literature [10]. In this study, *calibration
 
 ### 3.1. Task and rating scales
 
-For an audio excerpt \(x_i\), the target is a two-dimensional overall score \(\mathbf y_i=(y_{i,V},y_{i,A})\), where \(V\) denotes valence and \(A\) denotes arousal. Targets are placed on a fixed \([-1,1]\) numerical scale:
+For an audio excerpt $x_i$, the target is a two-dimensional overall score $\mathbf y_i=(y_{i,V},y_{i,A})$, where $V$ denotes valence and $A$ denotes arousal. Targets are placed on a fixed $[-1,1]$ numerical scale:
 
-\[
+$$
  y^{\mathrm{DEAM}}_{i,k}=\frac{r^{\mathrm{DEAM}}_{i,k}-5}{4},
  \qquad
  y^{\mathrm{PMEmo}}_{i,k}=2r^{\mathrm{PMEmo}}_{i,k}-1,
  \quad k\in\{V,A\}. \tag{1}
-\]
+$$
 
 The DEAM source ratings use the official static excerpt scores on the 1–9 scale. PMEmo static mean scores are checked to lie within [0,1] before the fixed mapping is applied. Neither transformation is fitted to evaluation-label extrema or moments. Equal numerical ranges do not establish identical annotation semantics.
 
 ### 3.2. Frozen audio features and source predictors
 
-Audio is converted to mono and resampled to 24 kHz. MERT-v1-95M is frozen at revision `12af15fef9d0ac838c3f475bfbbf26d2060dd4f5`. The final four hidden layers are averaged; ten-second windows with five-second spacing provide overlapping representations, which are aggregated into one-second bins. Denote the resulting 768-dimensional sequence by \(\mathbf h_{i,t}\), for \(t=1,\ldots,T_i\). The mean-pooled representation is
+Audio is converted to mono and resampled to 24 kHz. MERT-v1-95M is frozen at revision `12af15fef9d0ac838c3f475bfbbf26d2060dd4f5`. The final four hidden layers are averaged; ten-second windows with five-second spacing provide overlapping representations, which are aggregated into one-second bins. Denote the resulting 768-dimensional sequence by $\mathbf h_{i,t}$, for $t=1,\ldots,T_i$. The mean-pooled representation is
 
-\[
+$$
  \mathbf z_i=\frac{1}{T_i}\sum_{t=1}^{T_i}\mathbf h_{i,t}. \tag{2}
-\]
+$$
 
-The mean-linear head maps \(\mathbf z_i\) directly to two outputs. The mean-MLP head uses a 32-unit hidden layer:
+The mean-linear head maps $\mathbf z_i$ directly to two outputs. The mean-MLP head uses a 32-unit hidden layer:
 
-\[
+$$
  \hat{\mathbf y}_i=f_{\theta}(x_i)
  =\mathbf W_2\operatorname{ReLU}(\mathbf W_1\mathbf z_i+\mathbf b_1)+\mathbf b_2. \tag{3}
-\]
+$$
 
-For the source attention comparison, a scalar linear score supplies softmax weights over \(\mathbf h_{i,t}\), followed by the same 32-unit head. The respective trainable parameter counts are 1,538, 24,674 and 25,443. Attention therefore adds 769 parameters and is not an exactly parameter-matched comparison. A training-mean constant is included as a source reference. The external experiment fixes the mean-MLP architecture and all three source checkpoints rather than selecting an architecture using PMEmo scores.
+For the source attention comparison, a scalar linear score supplies softmax weights over $\mathbf h_{i,t}$, followed by the same 32-unit head. The respective trainable parameter counts are 1,538, 24,674 and 25,443. Attention therefore adds 769 parameters and is not an exactly parameter-matched comparison. A training-mean constant is included as a source reference. The external experiment fixes the mean-MLP architecture and all three source checkpoints rather than selecting an architecture using PMEmo scores.
 
-DEAM source features cover the full 45-second excerpt with 45 bins. PMEmo features use the complete supplied chorus, with no fixed 45-second truncation. The existing feature function includes bin centers at 0.5, 1.5, … seconds up to the actual duration, so \(T_i=\lfloor D_i-0.5\rfloor+1\). A tail shorter than half a second adds no separate bin; a longer tail can contribute a partial final bin. Returned bins receive equal weights in Equation (2). This is an explicitly fixed temporal quantization rule, not exact duration-weighted averaging over all original frames.
+DEAM source features cover the full 45-second excerpt with 45 bins. PMEmo features use the complete supplied chorus, with no fixed 45-second truncation. The existing feature function includes bin centers at 0.5, 1.5, … seconds up to the actual duration, so $T_i=\lfloor D_i-0.5\rfloor+1$. A tail shorter than half a second adds no separate bin; a longer tail can contribute a partial final bin. Returned bins receive equal weights in Equation (2). This is an explicitly fixed temporal quantization rule, not exact duration-weighted averaging over all original frames.
 
 ### 3.3. Offset and half-offset correction
 
-Let \(\mathcal S_b\) be a rated target support set of size \(b\in\{5,10\}\), disjoint from the evaluation set. For a frozen source prediction \(p_{i,k}=f_{\theta}(x_i)_k\), the support residual mean is
+Let $\mathcal S_b$ be a rated target support set of size $b\in\{5,10\}$, disjoint from the evaluation set. For a frozen source prediction $p_{i,k}=f_{\theta}(x_i)_k$, the support residual mean is
 
-\[
+$$
  \hat\mu_{b,k}=\frac{1}{b}\sum_{i\in\mathcal S_b}(y_{i,k}-p_{i,k}). \tag{4}
-\]
+$$
 
-No correction returns \(p_{i,k}\). Offset correction returns \(p_{i,k}+\hat\mu_{b,k}\), and half-offset returns \(p_{i,k}+\tfrac12\hat\mu_{b,k}\). The axis-specific primary rule is
+No correction returns $p_{i,k}$. Offset correction returns $p_{i,k}+\hat\mu_{b,k}$, and half-offset returns $p_{i,k}+\tfrac12\hat\mu_{b,k}$. The axis-specific primary rule is
 
-\[
+$$
  q_{i,V}=p_{i,V},\qquad
  q_{i,A}=p_{i,A}+\frac12\hat\mu_{b,A}. \tag{5}
-\]
+$$
 
 Thus the primary intervention estimates one scalar from the target ratings and retains the valence prediction exactly. The half strength is fixed; it is not searched over using target evaluation labels. Ratings for both axes are available in the support data, but Equation (5) uses only the arousal component. None of the output rules clips predictions to the nominal target range.
 
 ### 3.4. Identity-regularized affine correction
 
-The affine comparator fits each axis separately. With source predictions \(p_i\) and support targets \(y_i\) for one axis, its objective is
+The affine comparator fits each axis separately. With source predictions $p_i$ and support targets $y_i$ for one axis, its objective is
 
-\[
+$$
  (\hat a,\hat c)=\arg\min_{a,c}
  \left\{\sum_{i\in\mathcal S_b}(y_i-a p_i-c)^2+\lambda(a-1)^2\right\},
  \qquad \lambda=1. \tag{6}
-\]
+$$
 
-The intercept is unpenalized; the slope is regularized toward the identity slope. Eliminating \(c\) gives
+The intercept is unpenalized; the slope is regularized toward the identity slope. Eliminating $c$ gives
 
-\[
+$$
  \hat a=
  \frac{\sum_{i\in\mathcal S_b}(p_i-\bar p)(y_i-\bar y)+\lambda}
       {\sum_{i\in\mathcal S_b}(p_i-\bar p)^2+\lambda},
  \qquad
  \hat c=\bar y-\hat a\bar p,
  \qquad q_i=\hat a p_i+\hat c. \tag{7}
-\]
+$$
 
-Equation (6) uses a summed squared-error loss. Replacing the sum by an average while retaining \(\lambda=1\) would change the effective regularization, so the convention is part of the protocol. For two emotion axes the rule fits four scalars while keeping the source head fixed. Equation (7) gives the closed-form solution and makes the adaptation parameters directly reproducible.
+Equation (6) uses a summed squared-error loss. Replacing the sum by an average while retaining $\lambda=1$ would change the effective regularization, so the convention is part of the protocol. For two emotion axes the rule fits four scalars while keeping the source head fixed. Equation (7) gives the closed-form solution and makes the adaptation parameters directly reproducible.
 
 ### 3.5. An exact error identity for interpreting offset changes
 
-For an evaluation set \(\mathcal E\), define residuals \(e_i=y_i-p_i\) and their mean \(\bar e_{\mathcal E}\). A fitted offset of strength \(\alpha\) produces the exact empirical identity
+For an evaluation set $\mathcal E$, define residuals $e_i=y_i-p_i$ and their mean $\bar e_{\mathcal E}$. A fitted offset of strength $\alpha$ produces the exact empirical identity
 
-\[
+$$
  \Delta\operatorname{MSE}
  =\frac{1}{|\mathcal E|}\sum_{i\in\mathcal E}
  \left[(e_i-\alpha\hat\mu_b)^2-e_i^2\right]
  =\alpha^2\hat\mu_b^2-2\alpha\hat\mu_b\bar e_{\mathcal E}. \tag{8}
-\]
+$$
 
 This follows by expanding the square. It shows why a support-derived offset can either reduce or increase evaluation error depending on its magnitude and alignment with the evaluation residual. The evaluation residual mean is used here only to interpret measured outcomes; it is unavailable for fitting a deployable correction. Equation (8) supplies no distributional guarantee and does not assume that support and evaluation residuals share a mean.
 
 ### 3.6. Metrics and paired group uncertainty
 
-For each axis, MSE and mean absolute error (MAE) are computed over evaluation excerpts. Pearson correlation measures centered linear association. Concordance correlation (CCC) is attributed to Lin [13] and is also used in the DEAM benchmark [3]. With empirical moments using divisor \(N\),
+For each axis, MSE and mean absolute error (MAE) are computed over evaluation excerpts. Pearson correlation measures centered linear association. Concordance correlation (CCC) is attributed to Lin [13] and is also used in the DEAM benchmark [3]. With empirical moments using divisor $N$,
 
-\[
+$$
  \operatorname{MSE}=\frac1N\sum_i(y_i-q_i)^2,
  \quad \operatorname{MAE}=\frac1N\sum_i|y_i-q_i|,
  \quad \rho_c=\frac{2\operatorname{cov}(y,q)}
  {\operatorname{var}(y)+\operatorname{var}(q)+(\bar y-\bar q)^2}. \tag{9}
-\]
+$$
 
-We also report \(R^2=1-\operatorname{MSE}/\operatorname{var}(y)\). Undefined correlation for a constant predictor is retained as undefined rather than assigned zero. Metrics are computed per seed–draw condition before averaging, rather than on an ensemble of averaged predictions.
+We also report $R^2=1-\operatorname{MSE}/\operatorname{var}(y)$. Undefined correlation for a constant predictor is retained as undefined rather than assigned zero. Metrics are computed per seed–draw condition before averaging, rather than on an ensemble of averaged predictions.
 
-For the fixed budget and method, let \(j\) index an evaluation identity-group representative, \(s\) a source-model seed and \(d\) an adaptation draw. The paired group-level error change is
+For the fixed budget and method, let $j$ index an evaluation identity-group representative, $s$ a source-model seed and $d$ an adaptation draw. The paired group-level error change is
 
-\[
+$$
  \delta_j=\frac{1}{SD}\sum_{s=1}^{S}\sum_{d=1}^{D}
  \left[(q_{j,s,d}-y_j)^2-(p_{j,s}-y_j)^2\right],
  \qquad \bar\delta=\frac1N\sum_{j=1}^{N}\delta_j. \tag{10}
-\]
+$$
 
-Here \(S=3\), \(D=10\) and \(N=334\) in the main external experiment. Bootstrap methods have a classical reference in Efron [14]; our actual resampling design is specified by Equation (10). We resample the \(N\) group representatives with replacement 2,000 times and use the 2.5th and 97.5th percentiles of resampled means. All comparisons use the same saved resampling indices. The intervals condition on the fixed source models, candidate pool and support draws. They do not quantify uncertainty from new source training, new candidate pools or a new target dataset. Risk grouping reduces identifiable dependence, but it does not prove statistical independence of all musical content.
+Here $S=3$, $D=10$ and $N=334$ in the main external experiment. Bootstrap methods have a classical reference in Efron [14]; our actual resampling design is specified by Equation (10). We resample the $N$ group representatives with replacement 2,000 times and use the 2.5th and 97.5th percentiles of resampled means. All comparisons use the same saved resampling indices. The intervals condition on the fixed source models, candidate pool and support draws. They do not quantify uncertainty from new source training, new candidate pools or a new target dataset. Risk grouping reduces identifiable dependence, but it does not prove statistical independence of all musical content.
 
 ## 4. Evaluation design
 
@@ -193,9 +193,9 @@ The minimum admission requirement of forty eligible groups and the twenty-group 
 
 ### 4.4. Numerical reproducibility
 
-The frozen MERT snapshot is checked against all 211 loaded weight tensors, including compatible position-convolution name mappings. Re-extraction of one source excerpt matches its cached features exactly; all three source mean-MLP checkpoints reproduce their original validation predictions exactly. An independent NumPy implementation of mean pooling, matrix multiplication and ReLU replays all 3 × 354 PMEmo predictions, with maximum absolute difference \(1.06\times10^{-7}\), and checks all 354 feature arrays and their hashes.
+The frozen MERT snapshot is checked against all 211 loaded weight tensors, including compatible position-convolution name mappings. Re-extraction of one source excerpt matches its cached features exactly; all three source mean-MLP checkpoints reproduce their original validation predictions exactly. An independent NumPy implementation of mean pooling, matrix multiplication and ReLU replays all 3 × 354 PMEmo predictions, with maximum absolute difference $1.06\times10^{-7}$, and checks all 354 feature arrays and their hashes.
 
-A separate local verifier reconstructs support draws, target mappings, correction parameters, per-excerpt predictions, metrics and the paired bootstrap inputs. Affine slopes are independently obtained through augmented least squares rather than the original closed-form implementation. The audit passes 40,650 checks and 291,626 numerical comparisons, with maximum discrepancy \(8.88\times10^{-16}\). These checks establish numerical consistency of the saved experiment, not independent-team replication or completeness of semantic deduplication.
+A separate local verifier reconstructs support draws, target mappings, correction parameters, per-excerpt predictions, metrics and the paired bootstrap inputs. Affine slopes are independently obtained through augmented least squares rather than the original closed-form implementation. The audit passes 40,650 checks and 291,626 numerical comparisons, with maximum discrepancy $8.88\times10^{-16}$. These checks establish numerical consistency of the saved experiment, not independent-team replication or completeness of semantic deduplication.
 
 ## 5. Results
 
