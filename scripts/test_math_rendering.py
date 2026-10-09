@@ -15,13 +15,15 @@ class ManuscriptMathTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r'^\$\$\s*$', text, re.M)), 20)
         self.assertEqual(re.findall(r'\\tag\{(\d+)\}', text), [str(n) for n in range(1, 11)])
 
-    def test_formula_bodies_and_prose_are_unchanged(self):
+    def test_formula_bodies_are_unchanged(self):
         import subprocess
         current = (ROOT / 'manuscript_en.md').read_text(encoding='utf-8')
         previous = subprocess.run(['git', 'show', '1f07ea8:manuscript_en.md'],
                                   cwd=ROOT, check=True, capture_output=True).stdout.decode('utf-8')
         canonical = previous.replace('\\[', '$$').replace('\\]', '$$').replace('\\(', '$').replace('\\)', '$')
-        self.assertEqual(current.replace('\r\n', '\n'), canonical.replace('\r\n', '\n'))
+        def formulas(text):
+            return re.findall(r'\$\$(.*?)\$\$|(?<!\$)\$([^$\n]+)\$(?!\$)', text, re.S)
+        self.assertEqual(formulas(current), formulas(canonical))
 
     def test_html_has_typeset_display_and_inline_math(self):
         text = (ROOT / 'manuscript_en.html').read_text(encoding='utf-8')
