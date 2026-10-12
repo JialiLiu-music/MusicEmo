@@ -16,6 +16,12 @@
 
 当前为英文论文初稿，作者信息、目标期刊模板及正式投稿声明需要后续补充。
 
+## CPU音乐情绪演示网站
+
+网站源码位于 [`code/`](code/README.md)，前后端分离：React/TypeScript中文页面与FastAPI CPU后端。支持上传片段、整体双轴预测、10秒窗口/5秒步长评分曲线、播放联动及JSON/CSV导出。窗口曲线来自静态模型，不是经验证的逐秒动态识别；默认无目标域校正。
+
+启动、固定MERT下载和论文预测头校验见 [`code/README.md`](code/README.md)。仓库不包含模型权重、试听音乐、虚拟环境或node_modules；克隆代码后仍需准备真实模型资产。自动测试与真实CPU执行的范围见 [`code/VALIDATION.md`](code/VALIDATION.md) 和 [`code/TIMELINE_UPGRADE-20261012.md`](code/TIMELINE_UPGRADE-20261012.md)。本仓库源码上传不等于公网网站部署。
+
 ## 文件结构
 
 - `manuscript_en.*`：Markdown、HTML和Word正文。
