@@ -2,6 +2,8 @@
 
 音乐情绪跨数据集少样本输出校准论文初稿及配套图表。
 
+**English** | [简体中文](README.zh-CN.md)
+
 ## 阅读入口
 
 - [英文论文正文](manuscript_en.md)
